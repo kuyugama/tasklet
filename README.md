@@ -134,12 +134,13 @@ if __name__ == "__main__":
 import asyncio
 
 import tasklet as tl
+from tasklet.backends.redis import RedisBackend
 
 import src
-from tl import events
+from tl import events, handlers
 
 tasklet = tl.TaskLetApp(
-    backend=tl.load_backend("redis://localhost:6379"),
+    backend=RedisBackend("redis://localhost:6379"),
 )
 
 async def main():
@@ -153,7 +154,7 @@ async def main():
         }
     )
     
-    await tasklet.fire(event)
+    await tasklet.fire(event)  # or await tasklet.fire(event, handlers.user_updated)
     
     info = await tasklet.query_event_info(event.id)
     
@@ -161,7 +162,9 @@ async def main():
     assert info.handled is False
     assert len(info.handle_info) == 0
     
-    handle_info = await tasklet.query_handle_info(event.id, handler="user_updated")
+    total_handle_info = await tasklet.query_handle_info(event.id, handlers=handlers.user_updated, wait_completion=True)
+    
+    handle_info = total_handle_info[0]
     
     assert handle_info.success
     assert handle_info.handler == "user_updated"
